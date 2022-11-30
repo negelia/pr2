@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:pr2/common/data_base_request.dart';
 import 'package:pr2/data/model/cheque.dart';
 import 'package:pr2/data/model/company.dart';
 import 'package:pr2/data/model/customer.dart';
 import 'package:pr2/data/model/role.dart';
 import 'package:pr2/data/model/supplier.dart';
+import 'package:pr2/data/model/type.dart';
 import 'package:pr2/data/model/user.dart';
 import 'package:pr2/data/model/vehicle.dart';
 import 'package:pr2/data/model/warehouse.dart';
@@ -37,15 +39,16 @@ class DataBaseHelper {
       database = await databaseFactoryFfi.openDatabase(_pathDB,
           options: OpenDatabaseOptions(
             version: _version,
-            onUpgrade: (db, oldVersion, newVersion) => onUpdateTable(db),
-            onCreate: (db, version) => onCreateTable(db),
+            onUpgrade: (db, oldVersion, newVersion) async =>
+                await onUpdateTable(db),
+            onCreate: (db, version) async => await onCreateTable(db),
           ));
     } else {
       database = await openDatabase(
         _pathDB,
         version: _version,
         onUpgrade: ((db, oldVersion, newVersion) => onUpdateTable(db)),
-        onCreate: (db, version) => onCreateTable(db),
+        onCreate: (db, version) async => await onCreateTable(db),
       );
     }
   }
@@ -57,7 +60,6 @@ class DataBaseHelper {
         await db.execute(DataBaseRequest.deleteTable(table));
       }
     }
-
     await onCreateTable(db);
   }
 
@@ -71,6 +73,7 @@ class DataBaseHelper {
   Future<void> onDropDataBase() async {
     await database.close();
     if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      databaseFactoryFfi.deleteDatabase(_pathDB);
     } else {
       deleteDatabase(_pathDB);
     }
@@ -80,6 +83,20 @@ class DataBaseHelper {
     try {
       for (var element in RoleEnum.values) {
         db.insert(DataBaseRequest.tableRole, Role(role: element.name).toMap());
+      }
+
+      for (var element in TypeEnum.values) {
+        db.insert(DataBaseRequest.tableType, Type(title: element.type).toMap());
+      }
+
+      for (var element in CompanyEnum.values) {
+        db.insert(
+            DataBaseRequest.tableCompany,
+            Company(
+                    account: element.account,
+                    title: element.title,
+                    address: element.address)
+                .toMap());
       }
 
       db.insert(
@@ -125,27 +142,27 @@ class DataBaseHelper {
                           address: 'г. Москва, ул. Маршруток, д.8')))
               .toMap());
 
-      db.insert(
-          DataBaseRequest.tableCheque,
-          Cheque(
-                  total: '30500 руб',
-                  idVehicle: Vehicle(
-                      title: 'super-puper bike',
-                      price: 30000,
-                      idType: TypeEnum.sport,
-                      idWarehouse: Warehouse(
-                          address: 'г.Москва, ул.Победы, д.1',
-                          cell: 12,
-                          idSupplier: Supplier(
-                              title: 'BIKES CO',
-                              address: 'г. Москва, ул. Маршруток, д.8'))),
-                  idCustomer: Customer(
-                      account: '123-456-123-456',
-                      surname: 'kruglova',
-                      name: 'ira',
-                      middle: 'ivanovna'),
-                  idCompany: CompanyEnum.company)
-              .toMap());
+      // db.insert(
+      //     DataBaseRequest.tableCheque,
+      //     Cheque(
+      //             total: '30500 руб',
+      //             idVehicle: Vehicle(
+      //                 title: 'super-puper bike',
+      //                 price: 30000,
+      //                 idType: TypeEnum.sport,
+      //                 idWarehouse: Warehouse(
+      //                     address: 'г.Москва, ул.Победы, д.1',
+      //                     cell: 12,
+      //                     idSupplier: Supplier(
+      //                         title: 'BIKES CO',
+      //                         address: 'г. Москва, ул. Маршруток, д.8'))),
+      //             idCustomer: Customer(
+      //                 account: '123-456-123-456',
+      //                 surname: 'kruglova',
+      //                 name: 'ira',
+      //                 middle: 'ivanovna'),
+      //             idCompany: CompanyEnum.company)
+      //         .toMap());
     } on DatabaseException catch (error) {
       print(error.result);
     }
